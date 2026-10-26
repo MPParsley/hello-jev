@@ -1,0 +1,4 @@
+transformers>=4.57
+huggingface_hub
+accelerate
+sentencepiece

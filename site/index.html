@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hello JEV</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --fg: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+    --ent: #2e7d4f; --neu: #8a8a84; --con: #c0392b; --accent: #3b5bdb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --card: #1e1e1c; --fg: #ecece8; --muted: #9a9a94; --line: #2f2f2c;
+      --ent: #4caf7a; --neu: #8f8f88; --con: #e06655; --accent: #7c95f5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 40px 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+          padding: 2px 10px; font-size: .85rem; color: var(--muted); }
+  .chip b { color: var(--fg); font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 16px; margin-bottom: 12px; }
+  .premise { color: var(--muted); font-size: .9rem; margin: 0 0 4px; }
+  .hyp { margin: 0 0 12px; font-weight: 500; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .badge { font-size: .8rem; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+           color: #fff; text-transform: uppercase; letter-spacing: .03em; }
+  .bar { flex: 1 1 240px; display: flex; height: 12px; border-radius: 6px; overflow: hidden;
+         background: var(--line); min-width: 0; }
+  .bar span { display: block; height: 100%; }
+  .legend { display: flex; gap: 16px; font-size: .85rem; color: var(--muted); margin-bottom: 12px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+  .nums { font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--muted); }
+  ol.rank { padding-left: 20px; margin: 8px 0 0; }
+  ol.rank li { margin: 6px 0; }
+  .err { border-color: var(--con); color: var(--con); white-space: pre-wrap; }
+  a { color: var(--accent); }
+  footer { margin-top: 48px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hello JEV 👋</h1>
+  <p class="sub">Een hello world-demo van <a href="https://huggingface.co/AlexWortega/openjev">OpenJev</a>,
+    een open-weights (MIT) model naar het idee van JEV. Het genereert geen tekst: het leest een
+    (premisse, hypothese)-paar en beslist in één forward pass of de hypothese
+    <b>volgt</b> (entailment), <b>neutraal</b> is of de premisse <b>tegenspreekt</b>.
+    Het model draait op een CPU-runner in GitHub Actions; deze pagina toont het resultaat.</p>
+
+  <div class="meta" id="meta"></div>
+  <div id="content"><div class="card">Resultaten laden…</div></div>
+
+  <footer>Gebouwd met GitHub Actions + GitHub Pages ·
+    <a href="https://github.com/MPParsley/hello-jev">broncode</a></footer>
+</main>
+<script>
+const COLORS = { entailment: "var(--ent)", neutral: "var(--neu)", contradiction: "var(--con)" };
+const NL = { entailment: "volgt", neutral: "neutraal", contradiction: "tegenspraak" };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pct = p => (p * 100).toFixed(1) + "%";
+const chip = (k, v) => v == null ? "" : `<span class="chip">${k}: <b>${esc(v)}</b></span>`;
+
+function bar(scores) {
+  const order = ["entailment", "neutral", "contradiction"].filter(k => k in scores);
+  return `<div class="bar" role="img" aria-label="${order.map(k => NL[k] + " " + pct(scores[k])).join(", ")}">` +
+    order.map(k => `<span style="width:${scores[k] * 100}%;background:${COLORS[k]}"></span>`).join("") +
+    `</div><span class="nums">${order.map(k => NL[k] + " " + pct(scores[k])).join(" · ")}</span>`;
+}
+
+fetch("results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
+  document.getElementById("meta").innerHTML =
+    chip("model", d.model) + chip("checkpoint", d.checkpoint) +
+    chip("parameters", d.parameters ? (d.parameters / 1e9).toFixed(2) + "B" : null) +
+    chip("laden", d.load_seconds != null ? d.load_seconds + " s" : null) +
+    chip("inferentie", d.inference_seconds != null ? d.inference_seconds + " s" : null) +
+    chip("gegenereerd", d.generated_at) +
+    (d.run_url ? `<span class="chip"><a href="${esc(d.run_url)}">Actions-run</a></span>` : "");
+
+  const el = document.getElementById("content");
+  if (d.status !== "ok") {
+    el.innerHTML = `<div class="card err"><b>De run is mislukt.</b>\n${esc(d.error || "onbekende fout")}</div>`;
+    return;
+  }
+  let html = `<h2>Classificatie</h2><div class="legend">` +
+    Object.keys(COLORS).map(k => `<span><i style="background:${COLORS[k]}"></i>${NL[k]}</span>`).join("") + `</div>`;
+  for (const e of d.examples) {
+    html += `<div class="card"><p class="premise">Premisse: ${esc(e.premise)}</p>
+      <p class="hyp">Hypothese: ${esc(e.hypothesis)}</p>
+      <div class="row"><span class="badge" style="background:${COLORS[e.label] || "var(--neu)"}">${NL[e.label] || esc(e.label)}</span>${bar(e.scores)}</div></div>`;
+  }
+  if (d.rerank) {
+    html += `<h2>Rerank: ${esc(d.rerank.question)}</h2><div class="card">
+      <p class="premise">Context: ${esc(d.rerank.premise)}</p><ol class="rank">` +
+      d.rerank.ranked.map(r => `<li>${esc(r.option)} <span class="nums">— entailment ${pct(r.entailment)}</span></li>`).join("") +
+      `</ol></div>`;
+  }
+  el.innerHTML = html;
+}).catch(err => {
+  document.getElementById("content").innerHTML =
+    `<div class="card err">Kon results.json niet laden: ${esc(err)}</div>`;
+});
+</script>
+</body>
+</html>
