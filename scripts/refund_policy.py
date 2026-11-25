@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 JUDGMENTS = {
     "wants_refund": "The customer wants their money back.",
     "product_defective": "The product the customer received is broken or defective.",
-    "legal_threat": "The customer threatens to take legal action.",
+    "legal_threat": "The customer says they will involve a lawyer or go to court.",
 }
 
 # Explicit thresholds instead of argmax.
