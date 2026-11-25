@@ -4,50 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hello JEV</title>
-<style>
-  :root {
-    --bg: #f7f7f5; --card: #ffffff; --fg: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
-    --ent: #2e7d4f; --neu: #8a8a84; --con: #c0392b; --accent: #3b5bdb;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #141413; --card: #1e1e1c; --fg: #ecece8; --muted: #9a9a94; --line: #2f2f2c;
-      --ent: #4caf7a; --neu: #8f8f88; --con: #e06655; --accent: #7c95f5;
-    }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 2rem; margin: 0 0 4px; }
-  h2 { font-size: 1.15rem; margin: 40px 0 12px; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
-  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-  .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px;
-          padding: 2px 10px; font-size: .85rem; color: var(--muted); }
-  .chip b { color: var(--fg); font-weight: 600; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-          padding: 16px; margin-bottom: 12px; }
-  .premise { color: var(--muted); font-size: .9rem; margin: 0 0 4px; }
-  .hyp { margin: 0 0 12px; font-weight: 500; }
-  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .badge { font-size: .8rem; font-weight: 600; padding: 2px 8px; border-radius: 6px;
-           color: #fff; text-transform: uppercase; letter-spacing: .03em; }
-  .bar { flex: 1 1 240px; display: flex; height: 12px; border-radius: 6px; overflow: hidden;
-         background: var(--line); min-width: 0; }
-  .bar span { display: block; height: 100%; }
-  .legend { display: flex; gap: 16px; font-size: .85rem; color: var(--muted); margin-bottom: 12px; flex-wrap: wrap; }
-  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
-  .nums { font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--muted); }
-  ol.rank { padding-left: 20px; margin: 8px 0 0; }
-  ol.rank li { margin: 6px 0; }
-  .err { border-color: var(--con); color: var(--con); white-space: pre-wrap; }
-  a { color: var(--accent); }
-  footer { margin-top: 48px; color: var(--muted); font-size: .85rem; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
+  <nav class="nav"><a href="./" aria-current="page">1 · Hello world</a><a href="refund.html">2 · Oordeel → beslissing</a></nav>
   <h1>Hello JEV 👋</h1>
   <p class="sub">Een hello world-demo van <a href="https://huggingface.co/AlexWortega/openjev">OpenJev</a>,
     een open-weights (MIT) model naar het idee van JEV. Het genereert geen tekst: het leest een

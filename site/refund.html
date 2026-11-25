@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oordeel naar beslissing</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  :root { --warn: #b7791f; }
+  @media (prefers-color-scheme: dark) { :root { --warn: #e0a84a; } }
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 8px 0 8px; }
+  .flow > div { flex: 1 1 150px; background: var(--card); border: 1px solid var(--line);
+                border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
+  .flow b { display: block; }
+  .flow .ai { border-left: 4px solid var(--accent); }
+  .flow .code { border-left: 4px solid var(--fg); }
+  .flow .arrow { flex: 0 0 auto; border: 0; background: none; padding: 0; align-self: center;
+                 color: var(--muted); }
+  .step { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+          color: var(--muted); margin: 16px 0 8px; }
+  .ticket-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+                 align-items: flex-start; }
+  .ticket-text { margin: 0; font-weight: 500; flex: 1 1 300px; }
+  .facts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .jrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; margin: 10px 0; }
+  .jq { font-size: .9rem; }
+  .jq code { font-size: .8rem; color: var(--muted); }
+  .jv { font-variant-numeric: tabular-nums; font-size: .9rem; text-align: right; }
+  .meter { grid-column: 1 / -1; position: relative; height: 10px; border-radius: 5px;
+           background: var(--line); }
+  .meter > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+  .meter i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--fg); opacity: .55; }
+  .rules { list-style: none; padding: 0; margin: 0; font-size: .9rem; }
+  .rules li { display: grid; grid-template-columns: 2.2em 1.6em minmax(0, 1fr); gap: 4px; padding: 5px 6px;
+              border-radius: 6px; }
+  .rules li.hit { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 500; }
+  .rules li.skip { opacity: .45; }
+  .rules .why { grid-column: 3; color: var(--muted); font-size: .82rem; font-weight: 400; }
+  .decision { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  table.params { border-collapse: collapse; font-size: .9rem; width: 100%; }
+  table.params td { padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  table.params td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav"><a href="./">1 · Hello world</a><a href="refund.html" aria-current="page">2 · Oordeel → beslissing</a></nav>
+  <h1>Jev oordeelt, code beslist</h1>
+  <p class="sub">Een klant vraagt om een terugbetaling. OpenJev beantwoordt alleen kleine, onafhankelijke
+    vragen over de tekst (<i>judgments</i>). Een deterministische policy in gewone code combineert die
+    kansen met harde feiten uit het ordersysteem en neemt de <i>beslissing</i>. Elke beslissing is terug
+    te voeren naar de gebruikte oordelen en de regel die besliste.
+    Naar <a href="https://typesafe.ai/blog/dont-call-it-a-decision-model">“Don’t call it a decision model”</a>.</p>
+
+  <div class="flow" aria-label="Architectuur">
+    <div><b>Ticket</b>tekst van de klant + feiten uit het ordersysteem</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="ai"><b>OpenJev · oordelen</b>één vraag per hypothese, kans op entailment</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="code"><b>Policy · code</b>geordende regels met expliciete drempels, getest zonder model</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div><b>Beslissing</b>+ volledige trace</div>
+  </div>
+
+  <div class="meta" id="meta"></div>
+  <div id="content"><div class="card">Resultaten laden…</div></div>
+
+  <footer>Policy: <a href="https://github.com/MPParsley/hello-jev/blob/main/scripts/refund_policy.py">scripts/refund_policy.py</a> ·
+    tests: <a href="https://github.com/MPParsley/hello-jev/blob/main/tests/test_refund_policy.py">tests/test_refund_policy.py</a></footer>
+</main>
+<script>
+const OUTCOME_COLOR = {
+  AUTO_REFUND: "var(--ent)", FORWARD_AGENT: "var(--accent)", HUMAN_REVIEW: "var(--warn)",
+  ESCALATE_LEGAL: "var(--con)", NOT_A_REFUND: "var(--neu)",
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pct = p => (p * 100).toFixed(1) + "%";
+const chip = (k, v) => v == null ? "" : `<span class="chip">${k}: <b>${esc(v)}</b></span>`;
+const eur = x => "€" + x.toFixed(2).replace(".", ",");
+
+function verdict(id, p, t) {
+  const yes = id === "legal_threat" ? t.legal_threshold : t.confident_yes;
+  if (p >= yes) return ["ja", "var(--ent)"];
+  if (p < t.confident_no) return ["nee", "var(--neu)"];
+  return ["onzeker", "var(--warn)"];
+}
+
+function judgmentRow(id, j, t) {
+  const [word, color] = verdict(id, j.p, t);
+  const marks = id === "legal_threat" ? [t.legal_threshold] : [t.confident_no, t.confident_yes];
+  return `<div class="jrow">
+    <span class="jq">${esc(j.question)} <code>${id}</code></span>
+    <span class="jv"><b style="color:${color}">${word}</b> · ${pct(j.p)}</span>
+    <div class="meter" role="img" aria-label="${id} ${pct(j.p)}">
+      <span style="width:${j.p * 100}%;background:${color}"></span>
+      ${marks.map(m => `<i style="left:${m * 100}%" title="drempel ${pct(m)}"></i>`).join("")}
+    </div></div>`;
+}
+
+function ticketCard(tk, t) {
+  const decidedIdx = tk.trace.findIndex(r => r.rule === tk.decided_by);
+  const rules = tk.trace.map((r, i) => {
+    const cls = i === decidedIdx ? "hit" : i > decidedIdx ? "skip" : "";
+    const mark = i > decidedIdx ? "–" : r.matched ? "✓" : "✗";
+    return `<li class="${cls}"><span>${r.rule}</span><span aria-label="${i > decidedIdx ? "niet bereikt" : r.matched ? "voldaan" : "niet voldaan"}">${mark}</span>
+      <span>${esc(r.description)}</span><span class="why">${esc(r.reason)}</span></li>`;
+  }).join("");
+  const f = tk.facts;
+  return `<div class="card">
+    <div class="ticket-head"><p class="ticket-text"><span class="nums">${tk.id}</span> “${esc(tk.text)}”</p>
+      <span class="badge" style="background:${OUTCOME_COLOR[tk.outcome]}">${esc(tk.outcome_label)}</span></div>
+    <div class="facts">${chip("bedrag", eur(f.order_amount_eur))}${chip("dagen sinds levering", f.days_since_delivery)}${chip("terugbetalingen 12 m", f.refunds_last_12_months)}</div>
+    <div class="step">1 · Oordelen (OpenJev)</div>
+    ${Object.entries(tk.judgments).map(([id, j]) => judgmentRow(id, j, t)).join("")}
+    <div class="step">2 · Regels (code, eerste match beslist)</div>
+    <ol class="rules">${rules}</ol>
+    <div class="decision"><b>3 · Beslissing:</b> ${esc(tk.outcome_label)} <span class="nums">(regel ${tk.decided_by})</span></div>
+  </div>`;
+}
+
+fetch("refund.json", { cache: "no-store" }).then(r => r.json()).then(d => {
+  document.getElementById("meta").innerHTML =
+    chip("model", d.model) + chip("checkpoint", d.checkpoint) +
+    chip("inferentie", d.inference_seconds != null ? d.inference_seconds + " s" : null) +
+    chip("gegenereerd", d.generated_at) +
+    (d.run_url ? `<span class="chip"><a href="${esc(d.run_url)}">Actions-run</a></span>` : "");
+  const el = document.getElementById("content");
+  if (d.status !== "ok") {
+    el.innerHTML = `<div class="card err"><b>De run is mislukt.</b>\n${esc(d.error || "onbekende fout")}</div>`;
+    return;
+  }
+  const t = d.policy.thresholds;
+  const counts = {};
+  d.tickets.forEach(tk => counts[tk.outcome] = (counts[tk.outcome] || 0) + 1);
+  let html = `<h2>Beslissingen</h2><div class="legend">` +
+    Object.entries(d.policy.outcomes).map(([k, v]) =>
+      `<span><i style="background:${OUTCOME_COLOR[k]}"></i>${esc(v)} (${counts[k] || 0})</span>`).join("") + `</div>`;
+  html += d.tickets.map(tk => ticketCard(tk, t)).join("");
+  html += `<h2>Policy-parameters</h2><div class="card"><table class="params">
+    <tr><td>“ja” als P(entailment) ≥</td><td>${pct(t.confident_yes)}</td></tr>
+    <tr><td>“nee” als P(entailment) &lt;</td><td>${pct(t.confident_no)}</td></tr>
+    <tr><td>drempel juridische dreiging</td><td>${pct(t.legal_threshold)}</td></tr>
+    <tr><td>maximum automatische terugbetaling</td><td>${eur(t.auto_refund_max_eur)}</td></tr>
+    <tr><td>retourtermijn</td><td>${t.return_window_days} dagen</td></tr>
+    <tr><td>garantietermijn (bij defect)</td><td>${t.warranty_days} dagen</td></tr>
+    <tr><td>max. terugbetalingen per 12 maanden</td><td>${t.max_refunds_per_year - 1}</td></tr>
+  </table></div>`;
+  el.innerHTML = html;
+}).catch(err => {
+  document.getElementById("content").innerHTML =
+    `<div class="card err">Kon refund.json niet laden: ${esc(err)}</div>`;
+});
+</script>
+</body>
+</html>

@@ -38,14 +38,22 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-openjev-v1
 
-      - name: Run OpenJev
+      - name: Test the refund policy (no model needed)
+        run: python -m unittest discover -s tests -v
+
+      - name: "Demo 1: hello world"
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: python scripts/run_openjev.py
 
+      - name: "Demo 2: Jev judges, code decides"
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python scripts/run_refund_demo.py
+
       - name: Show results
         if: always()
-        run: cat site/results.json
+        run: cat site/results.json site/refund.json
 
       - uses: actions/configure-pages@v5
         if: always()
