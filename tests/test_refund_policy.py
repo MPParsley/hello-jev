@@ -36,6 +36,17 @@ class RefundPolicyTest(unittest.TestCase):
     def test_legal_threat_wins_over_everything(self):
         self.assertEqual(self.decide(j(legal=0.85)), ("ESCALATE_LEGAL", "R1"))
 
+    def test_legal_threshold_is_deliberately_low(self):
+        # 0.70 is "unsure" for other judgments, but enough for legal escalation.
+        self.assertEqual(self.decide(j(legal=0.70)), ("ESCALATE_LEGAL", "R1"))
+        self.assertEqual(self.decide(j(legal=0.55)), ("AUTO_REFUND", "R5"))
+
+    def test_higher_limit_in_policy_v2(self):
+        facts = Facts(44.90, 2, 0)
+        self.assertEqual(self.decide(j(), facts), ("FORWARD_AGENT", "R6"))
+        d = evaluate(j(), facts, auto_refund_max_eur=50.0)
+        self.assertEqual((d["outcome"], d["decided_by"]), ("AUTO_REFUND", "R5"))
+
     def test_no_refund_intent(self):
         self.assertEqual(self.decide(j(wants=0.02)), ("NOT_A_REFUND", "R2"))
 

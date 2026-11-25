@@ -22,7 +22,10 @@ JUDGMENTS = {
 # Explicit thresholds instead of argmax.
 CONFIDENT_YES = 0.90   # P(entailment) at or above this counts as "yes"
 CONFIDENT_NO = 0.10    # P(entailment) below this counts as "no"; in between = unsure
-LEGAL_THRESHOLD = 0.80
+# Deliberately lower than CONFIDENT_YES: missing a real legal threat is far more
+# costly than sending an ordinary complaint to legal by mistake. With only a
+# handful of example tickets this value is a judgment call, not a calibration.
+LEGAL_THRESHOLD = 0.60
 AUTO_REFUND_MAX_EUR = 25.00
 RETURN_WINDOW_DAYS = 30
 WARRANTY_DAYS = 730
@@ -57,8 +60,12 @@ def _eur(x: float) -> str:
     return f"€{x:.2f}".replace(".", ",")
 
 
-def evaluate(judgments: dict[str, float], facts: Facts) -> dict:
-    """Apply the policy. `judgments` maps judgment id -> P(entailment)."""
+def evaluate(judgments: dict[str, float], facts: Facts,
+             auto_refund_max_eur: float = AUTO_REFUND_MAX_EUR) -> dict:
+    """Apply the policy. `judgments` maps judgment id -> P(entailment).
+
+    `auto_refund_max_eur` lets demo 3 run a changed business policy (v2).
+    """
     wants = judgments["wants_refund"]
     defective = judgments["product_defective"]
     legal = judgments["legal_threat"]
@@ -88,12 +95,12 @@ def evaluate(judgments: dict[str, float], facts: Facts) -> dict:
             f"({window_why}); {facts.refunds_last_12_months} eerdere terugbetalingen",
             "FORWARD_AGENT"),
         RuleResult(
-            "R5", f"bedrag ≤ {_eur(AUTO_REFUND_MAX_EUR)} → automatisch terugbetalen",
-            facts.order_amount_eur <= AUTO_REFUND_MAX_EUR,
+            "R5", f"bedrag ≤ {_eur(auto_refund_max_eur)} → automatisch terugbetalen",
+            facts.order_amount_eur <= auto_refund_max_eur,
             f"bedrag = {_eur(facts.order_amount_eur)}", "AUTO_REFUND"),
         RuleResult(
             "R6", "anders → medewerker", True,
-            f"bedrag {_eur(facts.order_amount_eur)} > {_eur(AUTO_REFUND_MAX_EUR)}",
+            f"bedrag {_eur(facts.order_amount_eur)} > {_eur(auto_refund_max_eur)}",
             "FORWARD_AGENT"),
     ]
     decided = next(r for r in rules if r.matched)

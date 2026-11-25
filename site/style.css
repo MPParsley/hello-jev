@@ -41,3 +41,14 @@ footer { margin-top: 48px; color: var(--muted); font-size: .85rem; }
 .nav a { text-decoration: none; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line);
          color: var(--muted); font-size: .9rem; }
 .nav a[aria-current] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+:root { --warn: #b7791f; }
+@media (prefers-color-scheme: dark) { :root { --warn: #e0a84a; } }
+.flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 8px 0 8px; }
+.flow > div { flex: 1 1 150px; background: var(--card); border: 1px solid var(--line);
+              border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
+.flow b { display: block; }
+.flow .ai { border-left: 4px solid var(--accent); }
+.flow .code { border-left: 4px solid var(--fg); }
+.flow .arrow { flex: 0 0 auto; border: 0; background: none; padding: 0; align-self: center;
+               color: var(--muted); }

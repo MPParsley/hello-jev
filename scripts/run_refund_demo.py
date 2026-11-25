@@ -50,13 +50,20 @@ TICKETS = [
     {"id": "T7",
      "text": "I'm not sure I like the colour of the sweater. What are my options?",
      "facts": Facts(19.99, 3, 0)},
+    {"id": "T8",
+     "text": "The glass jar of my new blender arrived cracked. Please refund me.",
+     "facts": Facts(44.90, 2, 0)},
+    {"id": "T9",
+     "text": "Second broken charger this month. Refund it now, or I will file a "
+             "complaint with the consumer protection authority.",
+     "facts": Facts(19.99, 4, 1)},
 ]
 
 # Plausible values for FAKE_JUDGMENTS=1 only; the real run uses the model.
 FAKE = {
     "T1": (0.98, 0.05, 0.01), "T2": (0.99, 0.97, 0.01), "T3": (0.02, 0.03, 0.01),
     "T4": (0.99, 0.10, 0.95), "T5": (0.97, 0.96, 0.01), "T6": (0.95, 0.02, 0.01),
-    "T7": (0.40, 0.02, 0.01),
+    "T7": (0.40, 0.02, 0.01), "T8": (0.97, 0.95, 0.01), "T9": (0.98, 0.93, 0.40),
 }
 
 

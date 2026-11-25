@@ -6,16 +6,6 @@
 <title>Oordeel naar beslissing</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  :root { --warn: #b7791f; }
-  @media (prefers-color-scheme: dark) { :root { --warn: #e0a84a; } }
-  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 8px 0 8px; }
-  .flow > div { flex: 1 1 150px; background: var(--card); border: 1px solid var(--line);
-                border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
-  .flow b { display: block; }
-  .flow .ai { border-left: 4px solid var(--accent); }
-  .flow .code { border-left: 4px solid var(--fg); }
-  .flow .arrow { flex: 0 0 auto; border: 0; background: none; padding: 0; align-self: center;
-                 color: var(--muted); }
   .step { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
           color: var(--muted); margin: 16px 0 8px; }
   .ticket-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -44,7 +34,7 @@
 </head>
 <body>
 <main>
-  <nav class="nav"><a href="./">1 · Hello world</a><a href="refund.html" aria-current="page">2 · Oordeel → beslissing</a></nav>
+  <nav class="nav"><a href="./">1 · Hello Jev</a><a href="refund.html" aria-current="page">2 · Jev + Python</a><a href="guardrails.html">3 · Jev + Python + OPA</a></nav>
   <h1>Jev oordeelt, code beslist</h1>
   <p class="sub">Een klant vraagt om een terugbetaling. OpenJev beantwoordt alleen kleine, onafhankelijke
     vragen over de tekst (<i>judgments</i>). Een deterministische policy in gewone code combineert die

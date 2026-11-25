@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gecontroleerde AI-beslissingen</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .flow .guard { border-left: 4px solid var(--con); }
+  .flow > div { flex-basis: 120px; }
+  .callout { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--warn);
+             border-radius: 10px; padding: 12px 16px; margin: 16px 0; font-size: .95rem; }
+  .callout p { margin: 0 0 6px; }
+  .callout p:last-child { margin: 0; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 16px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .stat b { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: .85rem; }
+  .pipe { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  @media (max-width: 640px) { .pipe { grid-template-columns: 1fr; } }
+  .pipe > div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .pipe .lbl { display: block; font-size: .75rem; font-weight: 600; text-transform: uppercase;
+               letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+  .pipe .small { display: block; font-size: .82rem; color: var(--muted); margin-top: 6px; }
+  .denied { border-color: var(--con) !important; }
+  .reasons { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; color: var(--con); }
+  .card.blocked { border-left: 4px solid var(--con); }
+  .jchips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .guards { margin: 0; padding-left: 20px; }
+  .guards li { margin: 6px 0; }
+  details summary { cursor: pointer; color: var(--accent); margin-top: 8px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+        overflow-x: auto; font-size: .8rem; line-height: 1.45; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav"><a href="./">1 · Hello Jev</a><a href="refund.html">2 · Jev + Python</a><a href="guardrails.html" aria-current="page">3 · Jev + Python + OPA</a></nav>
+  <h1>Jev oordeelt, Python beslist, OPA controleert</h1>
+  <p class="sub">Elke laag heeft één verantwoordelijkheid en één eigenaar. OpenJev levert oordelen,
+    de businesspolicy in Python stelt een beslissing voor, en een onafhankelijke guardrail-policy in
+    <a href="https://www.openpolicyagent.org/">Open Policy Agent</a> controleert of die beslissing zonder
+    mens mag worden uitgevoerd. Wordt een guardrail geschonden, dan gaat het ticket naar een mens.</p>
+
+  <div class="flow" aria-label="Architectuur">
+    <div><b>Ticket</b>tekst + feiten</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="ai"><b>OpenJev · oordelen</b>kansen per vraag</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="code"><b>Python · voorstel</b>businessregels, eigenaar: business</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="guard"><b>OPA · controle</b>guardrails, eigenaar: risk &amp; compliance</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div><b>Uitvoering</b>of menselijke review</div>
+  </div>
+
+  <div class="callout">
+    <p><b>Scenario.</b> De business verhoogt de grens voor automatische terugbetaling van €25 naar
+      <b id="v2max">€50</b> (policy v2). Die wijziging is correct geïmplementeerd en getest, maar
+      compliance heeft een plafond van €25 vastgelegd in OPA.</p>
+    <p>De guardrails herhalen de businesslogica niet: ze leggen grenzen vast die altijd moeten gelden,
+      wat de businessregels ook zeggen.</p>
+  </div>
+
+  <div class="meta" id="meta"></div>
+  <div id="content"><div class="card">Resultaten laden…</div></div>
+
+  <footer>Guardrails: <a href="https://github.com/MPParsley/hello-jev/blob/main/policy/guardrails.rego">policy/guardrails.rego</a> ·
+    tests: <a href="https://github.com/MPParsley/hello-jev/blob/main/policy/guardrails_test.rego">policy/guardrails_test.rego</a> ·
+    businesspolicy: <a href="https://github.com/MPParsley/hello-jev/blob/main/scripts/refund_policy.py">scripts/refund_policy.py</a></footer>
+</main>
+<script>
+const OUTCOME_COLOR = {
+  AUTO_REFUND: "var(--ent)", FORWARD_AGENT: "var(--accent)", HUMAN_REVIEW: "var(--warn)",
+  ESCALATE_LEGAL: "var(--con)", NOT_A_REFUND: "var(--neu)",
+};
+const LABEL = {
+  AUTO_REFUND: "Automatisch terugbetalen", FORWARD_AGENT: "Doorsturen naar medewerker",
+  HUMAN_REVIEW: "Menselijke review", ESCALATE_LEGAL: "Juridische dienst", NOT_A_REFUND: "Gewone supportflow",
+};
+const GUARDS = [
+  ["G1", "Nooit automatisch meer dan €25 terugbetalen."],
+  ["G2", "Geen automatische beslissing als legal_threat boven 30% ligt, ook ver onder de escalatiedrempel van de businesspolicy."],
+  ["G3", "Een automatische beslissing vraagt een zeker oordeel: wants_refund ≥ 90% om te betalen, ≤ 10% om als gewone vraag af te handelen."],
+  ["G4", "Alleen goedgekeurde modelversies mogen automatische beslissingen sturen."],
+];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pct = p => Math.round(p * 100) + "%";
+const chip = (k, v) => v == null ? "" : `<span class="chip">${k}: <b>${esc(v)}</b></span>`;
+const eur = x => "€" + x.toFixed(2).replace(".", ",");
+const badge = o => `<span class="badge" style="background:${OUTCOME_COLOR[o]}">${esc(LABEL[o] || o)}</span>`;
+
+function ticketCard(tk) {
+  const f = tk.facts;
+  const opa = tk.allow
+    ? `<span class="badge" style="background:var(--ent)">Toegestaan</span>`
+    : `<span class="badge" style="background:var(--con)">Geweigerd</span>
+       <ul class="reasons">${tk.deny.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
+  return `<div class="card${tk.allow ? "" : " blocked"}">
+    <p class="ticket-text" style="margin:0"><span class="nums">${tk.id}</span> “${esc(tk.text)}”</p>
+    <div class="jchips">${chip("bedrag", eur(f.order_amount_eur))}${chip("dagen", f.days_since_delivery)}
+      ${Object.entries(tk.judgments).map(([k, p]) => chip(k, pct(p))).join("")}</div>
+    <div class="pipe">
+      <div><span class="lbl">Voorstel · Python v2</span>${badge(tk.proposed)}
+        <span class="small">regel ${esc(tk.proposed_by)}${tk.proposed !== tk.v1_outcome ? ` · v1 gaf: ${esc(LABEL[tk.v1_outcome])}` : ""}</span></div>
+      <div class="${tk.allow ? "" : "denied"}"><span class="lbl">Controle · OPA</span>${opa}</div>
+      <div><span class="lbl">Uitvoering</span>${badge(tk.final)}</div>
+    </div></div>`;
+}
+
+fetch("guardrails.json", { cache: "no-store" }).then(r => r.json()).then(d => {
+  if (d.policy_v2_max_eur) document.getElementById("v2max").textContent = eur(d.policy_v2_max_eur);
+  document.getElementById("meta").innerHTML =
+    chip("model", d.model) + chip("checkpoint", d.checkpoint) + chip("OPA", d.opa_version) +
+    chip("gegenereerd", d.generated_at) +
+    (d.run_url ? `<span class="chip"><a href="${esc(d.run_url)}">Actions-run</a></span>` : "");
+  const el = document.getElementById("content");
+  if (d.status !== "ok") {
+    el.innerHTML = `<div class="card err"><b>De run is mislukt.</b>\n${esc(d.error || "onbekende fout")}</div>`;
+    return;
+  }
+  const n = d.tickets.length;
+  const auto = d.tickets.filter(t => t.proposed === "AUTO_REFUND" || t.proposed === "NOT_A_REFUND").length;
+  const blocked = d.tickets.filter(t => !t.allow).length;
+  let html = `<div class="stats">
+    <div class="stat"><b>${n}</b><span>tickets</span></div>
+    <div class="stat"><b>${auto}</b><span>automatische beslissingen voorgesteld</span></div>
+    <div class="stat"><b style="color:var(--con)">${blocked}</b><span>geweigerd door OPA → mens</span></div>
+  </div>`;
+  html += `<h2>Per ticket</h2>` + d.tickets.map(ticketCard).join("");
+  html += `<h2>Guardrails</h2><div class="card"><ol class="guards">` +
+    GUARDS.map(([id, txt]) => `<li><b>${id}</b> ${esc(txt)}</li>`).join("") +
+    `</ol><p class="nums" style="margin:12px 0 0">Beslissingen waarbij een mens betrokken is (medewerker, review, juridische dienst) zijn altijd toegestaan.</p>
+    <details><summary>Bekijk de Rego-policy</summary><pre><code>${esc(d.rego)}</code></pre></details></div>`;
+  el.innerHTML = html;
+}).catch(err => {
+  document.getElementById("content").innerHTML =
+    `<div class="card err">Kon guardrails.json niet laden: ${esc(err)}</div>`;
+});
+</script>
+</body>
+</html>
